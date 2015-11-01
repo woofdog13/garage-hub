@@ -12,9 +12,10 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last Updated : 7/15/2015
+ *  Last Updated : Nov 1 2015
  *
  */
+ 
 definition(
 	name: "MyQ-Manager",
 	namespace: "woofdog13",
@@ -23,11 +24,16 @@ definition(
 	category: "SmartThings Labs",
 )
 
+
+
+import groovy.json.JsonSlurper
+import groovy.json.JsonBuilder
+
 preferences {
-	page(name: "prefLogIn", title: "Garage doors")    
-	page(name: "prefListDevices", title: "Garage doors")
+	page(name: "prefLogIn", title: "MyQ")    
+	page(name: "prefListDevices", title: "MyQ")
 	page(name: "onDoorOpenPage")
-}
+    }
 
 /* Preferences */
 def prefLogIn() {
@@ -44,8 +50,8 @@ def prefLogIn() {
 			input(name: "polling", title: "Server Polling (in Minutes)", type: "int", description: "in minutes", defaultValue: "5" )
 			input(name: "contactSensorTrigger", title: "Contact Sensor to trigger refresh ", type: "capability.contactSensor", required: "false", multiple: "true")
 			input(name: "accelerationSensorTrigger", title: "Acceleration Sensor to trigger refresh ", type: "capability.accelerationSensor", required: "false", multiple: "true")
-	    input(name: "toOnDoorOpenPage", page: "onDoorOpenPage", title: "Global Hello Home")
-		}
+	    href(name: "toOnDoorOpenPage", page: "onDoorOpenPage", title: "Global Hello Home")
+        }
 	}
 }
 
@@ -142,8 +148,14 @@ def initialize() {
 	runRefresh()
 }
 
+def getSelectedDevices( settingsName ) { 
+	def selectedDevices = [] 
+	(!settings.get(settingsName))?:((settings.get(settingsName)?.getAt(0)?.size() > 1)  ? settings.get(settingsName)?.each { selectedDevices.add(it) } : selectedDevices.add(settings.get(settingsName))) 
+	return selectedDevices 
+} 
+
 def onDoorOpenPage() {
-  dynamicPage(name:"onDoorOpenPage", title:"Global Actions (Any Code)") {
+  dynamicPage(name:"onDoorOpenPage", title:"Global Actions (Any Door)") {
     section("Actions") {
       def phrases = location.helloHome?.getPhrases()*.label
       if (phrases) {
@@ -157,12 +169,6 @@ def onDoorOpenPage() {
     }
   }
 }
-
-def getSelectedDevices( settingsName ) { 
-	def selectedDevices = [] 
-	(!settings.get(settingsName))?:((settings.get(settingsName)?.getAt(0)?.size() > 1)  ? settings.get(settingsName)?.each { selectedDevices.add(it) } : selectedDevices.add(settings.get(settingsName))) 
-	return selectedDevices 
-} 
 
 /* Access Management */
 private forceLogin() {
@@ -358,6 +364,32 @@ def sendCommand(child, attributeName, attributeValue) {
 		return true
 	} 
 }
+
+// To allow performance of Global Hello Home; defined in onDoorOpenPage
+def performActions(evt) {
+  if(evt.value == "unlocked" && evt.data) {
+    def codeData = new JsonSlurper().parseText(evt.data)
+    if(enabledUsersArray().contains(codeData.usedCode) || isManualUnlock(codeData)) {
+      // Global Hello Home
+      if (noRunPresence && doRunPresence == null) {
+        if (!anyoneHome(noRunPresence)) {
+          location.helloHome.execute(homePhrases)
+        }
+      } else if (doRunPresence && noRunPresence == null) {
+        if (anyoneHome(doRunPresence)) {
+          location.helloHome.execute(homePhrases)
+        }
+      } else if (doRunPresence && noRunPresence) {
+        if (anyoneHome(doRunPresence) && !anyoneHome(noRunPresence)) {
+          location.helloHome.execute(homePhrases)
+        }
+      } else {
+       location.helloHome.execute(homePhrases)
+      }
+    }
+  }
+}
+
 
 def runRefresh(evt) {
 	if (evt) { 
