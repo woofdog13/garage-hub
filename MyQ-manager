@@ -25,9 +25,10 @@ definition(
 )
 
 
-
+/*  Probably not needed, I think these are for z-wave
 import groovy.json.JsonSlurper
 import groovy.json.JsonBuilder
+*/
 
 preferences {
 	page(name: "prefLogIn", title: "MyQ")    
@@ -365,13 +366,44 @@ def sendCommand(child, attributeName, attributeValue) {
 	} 
 }
 
+
+
 // To allow performance of Global Hello Home; defined in onDoorOpenPage
+
+
 def performActions(evt) {
-  if(evt.value == "unlocked" && evt.data) {
-    def codeData = new JsonSlurper().parseText(evt.data)
-    if(enabledUsersArray().contains(codeData.usedCode) || isManualUnlock(codeData)) {
+  refresh()
+  log.info "Event " + evt.displayName + " " + evt.value " occurred"
+  if(evt.value == "open" ) {
+ 
       // Global Hello Home
-      if (noRunPresence && doRunPresence == null) {
+  /*    if (noRunPresence && doRunPresence == null) {
+        if (!anyoneHome(noRunPresence)) {
+          location.helloHome.execute(homePhrases)
+        }
+      } else if (doRunPresence && noRunPresence == null) {
+        if (anyoneHome(doRunPresence)) {
+          location.helloHome.execute(homePhrases)
+        }
+      } else if (doRunPresence && noRunPresence) {
+        if (anyoneHome(doRunPresence) && !anyoneHome(noRunPresence)) {
+          location.helloHome.execute(homePhrases)
+        }
+      } else {
+       location.helloHome.execute(homePhrases)
+      }*/
+ 
+    location.helloHome.execute(homePhrases)
+  }
+}
+
+  /* Old version
+def performActions(evt) {
+  refresh()
+  if(evt.value == "open" && evt.data) {
+ 
+      // Global Hello Home
+   if (noRunPresence && doRunPresence == null) {
         if (!anyoneHome(noRunPresence)) {
           location.helloHome.execute(homePhrases)
         }
@@ -386,11 +418,11 @@ def performActions(evt) {
       } else {
        location.helloHome.execute(homePhrases)
       }
-    }
+    location.helloHome.execute(homePhrases)
   }
 }
 
-
+*/
 def runRefresh(evt) {
 	if (evt) { 
 		log.info "Event " + evt.displayName + " triggered refresh" 
